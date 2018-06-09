@@ -1,0 +1,6 @@
+﻿  ConsoleApplication1.cpp
+c:\users\thiago\desktop\hello world!\jogo snake oficinas 1\consoleapplication1\consoleapplication1\consoleapplication1.cpp(187): warning C4244: 'argumento': conversão de 'time_t' para 'unsigned int', possível perda de dados
+c:\users\thiago\desktop\hello world!\jogo snake oficinas 1\consoleapplication1\consoleapplication1\consoleapplication1.cpp(213): error C4996: 'kbhit': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _kbhit. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.16299.0\ucrt\conio.h(458): note: consulte a declaração de 'kbhit'
+c:\users\thiago\desktop\hello world!\jogo snake oficinas 1\consoleapplication1\consoleapplication1\consoleapplication1.cpp(215): error C4996: 'getch': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _getch. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.16299.0\ucrt\conio.h(452): note: consulte a declaração de 'getch'
