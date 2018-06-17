@@ -1,5 +1,31 @@
+#include <LiquidCrystal.h>
 #include "funcoes.h"
 
+/* Declaração dos Pinos:
+ *                                         Y
+ *  Joystick:  Eixo X = A5    ---|GND      /\
+ *             Eixo Y = A4    ---|5V       0
+ *             Button = A3    ---|VRx   0 -|- 1023  -> X
+ *                            ---|VRy     1023
+ *
+ *  LCD:
+ *
+ *
+ *
+ *  Buzzer:
+ *
+ *
+ *
+ *  MatrizLed: Leds X = {52, 50, 48, 46}
+ *             Leds Y = {53, 51, 49, 47}
+ *
+ */
+
+  LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+  int ledsX[4] = {53, 51, 49, 47};  // X = {53, 51, 49, 47}
+  int ledsY[4] = {52, 50, 48, 46};  // Y = {52, 50, 48, 46}
+  int joy_x = A5;
+  int joy_y = A4;
   Snake s;
   Food f;
   Snake* atual = NULL;
@@ -13,66 +39,47 @@
 void setup() {
   // put your setup code here, to run once:
 
-  srand(time(NULL));
+  Serial.begin(9600);
+  lcd.begin(16,2);
+  
+  pinMode(joy_x, INPUT);
+  pinMode(joy_y, INPUT);
+  
+  for(int i = 0; i < 4; i++)
+  {
+    pinMode(ledsY[i], OUTPUT);
+    pinMode(ledsX[i], OUTPUT);
+  }
 
-  s.x = rand() % 8 + 4; // Gera uma posição de Start para a Cobra no centro do mapa (da posição 4 à 12)
-  s.y = rand() % 8 + 4;
-  s.dir = rand() % 4 + 1; // Gera uma direção aleatória para a cobra pro jogo começar
+  randomSeed(analogRead(0));
 
-  if (s.dir == 1) {       // Adiciona as outras 2 partes do corpo da cobra dependendo da direção que ela está indo
-    adicionaEmBaixo(&s);
-    adicionaEmBaixo(s.prox);
-  }
-  if (s.dir == 2) {
-    adicionaNaEsquerda(&s);
-    adicionaNaEsquerda(s.prox);
-  }
-  if (s.dir == 3) {
-    adicionaEmCima(&s);
-    adicionaEmCima(s.prox);
-  }
-  if (s.dir == 4) {
-    adicionaNaDireita(&s);
-    adicionaNaDireita(s.prox);
-  }
+  inicializaJogo(&s, &f);
   criaComida(&f, &s);
-
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  while(!colidiu)
-  {
-    fflush(stdin);
-    if (kbhit())  // Se tem alguma tecla sendo apertada, Pego a tecla e mudo a direção da cobra de acordo com a tecla
-    {
-      fflush(stdin);
-      switch (getch())
-      {
-        case 'w':
-          if (s.dir != 3) // Não vai ir pra cima caso esteja indo pra baixo
-            s.dir = 1;
-          break;
-        case 'd':
-          if (s.dir != 4)
-            s.dir = 2;
-          break;
-        case's':
-          if (s.dir != 1)
-            s.dir = 3;
-          break;
-        case'a':
-          if (s.dir != 2)
-            s.dir = 4;
-          break;
-        default:
-          break;
-      }
-    }
 
+  
+  while (!colidiu) {
+
+    // Delay "velocidade" de Atualização do Jogo
+    delay(350);
+
+    // Muda a Direção da Cobra
+    if     (analogRead(joy_y) <= 341 && s.dir != 3)  // Cima ??esquerda
+      s.dir = 1;
+    else if(analogRead(joy_x) >= 682 && s.dir != 4)  // Direita ??baixo
+      s.dir = 2;
+    else if(analogRead(joy_y) >= 682 && s.dir != 1)  // Baixo ??direita
+      s.dir = 3;
+    else if(analogRead(joy_x) <= 341 && s.dir != 2)  // Esquerda ??cima
+      s.dir = 4;
+      
+    // Atualiza Posição da Cobra
     movimentaCobra(&s, &ultimo_x, &ultimo_y);
 
-    if (comeu)  // Se comeu na iteração passada adiciona um novo bloco na cauda da cobra exatamente no lugar da corpo na ultima iteração
+    // Se comeu na iteração passada adiciona um novo bloco na cauda da cobra exatamente no lugar da corpo na ultima iteração
+    if (comeu)
     {
       atual = &s;
       while (atual->prox != NULL)   // Vamos até o ultimo bloco
@@ -80,64 +87,37 @@ void loop() {
       atual->prox = (Snake*)malloc(sizeof(Snake));  // O proximo é um novo bloco
       atual->prox->x = ultimo_x;    // O lugar dele é na posição do ultimo bloco que saiu de lá
       atual->prox->y = ultimo_y;
+      atual->prox->prox = NULL;
       pontuacao += 1;   // Atualiza pontuação
       comeu = 0;      // Vai ter que comer de novo
       criaComida(&f, &s); // Cria nova comida
     }
 
-    if (s.x == f.x && s.y == f.y) // Verifica se a cobra comeu
-    {
+    // Verifica se a cobra comeu
+    if (s.x == f.x && s.y == f.y)
       comeu = 1;
-    }
 
-    delay(700);
-    system("@cls||clear");
-    printf("Pontuação: %d \n\n", pontuacao);
-    imprimeTabuleiro(&s, &f);
+    lcd.setCursor(0, 0);
+    lcd.print("Pontuacao: ");
+    lcd.print(pontuacao);
+    imprimeTabuleiro(&s, &f); // Ta invertido o X com Y essa porra!!!
+    
+    acendeLeds(&s, &f, ledsX, 4, ledsY, 4);
 
-    atual = s.prox;     // Verifica se a cobra bateu no prórpio corpo
+    // Verifica se a cobra bateu no prórpio corpo
+    atual = s.prox;
     while (atual != NULL)
     {
-      if (atual->x == s.x && atual->y == s.y){  // Se bateu não vai mais repetir o loop do jogo
-        colidiu = true;
+      if (atual->x == s.x && atual->y == s.y) { // Se bateu não vai mais repetir o loop do jogo
+        colidiu = 1;
       }
       atual = atual->prox;
     }
   }
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Fim de Jogo");
+  delay(5000);
+  
 }
 
-// ConsoleApplication1.cpp : define o ponto de entrada para o aplicativo do console.
-//
-
-
-
-
-/// INICIALIZAR A COBRA
-/// INICIALIZAR A COMIDA
-/// MUDAR A DIREÇÃO DO MOVIMENTO DA COBRA DE ACORDO COM O USUÁRIO
-/// FAZER A COBRA APARECER DO OUTRO LADO DO MAPA (PASSOU DE 0 VAI PRA 16 E VICE VERSA)
-/// MOVIMENTA A COBRA
-/// COLOCAR NOVO "BLOCO DE CORPO" CASO TENHA COMIDO NA ITERAÇÃO PASSADA E ATUALIZAR PONTUAÇAO
-/// CONFERIR SE BATEU E ACABAR COM O JOGO
-/// SE COMEU COLOCAR UM NOVO "PEDAÇO DE CORPO" NA PROXIMA VEZ QUE FOR ATUALIZAR O CORPO
-/// IMPRIMIR NA TELA O JOGO E A PONTUAÇÃO
-/// IMPLEMENTAR O DELAY PARA CADA LOOP "VELOCIDADE DA COBRA"
-/// REPETIR ^ ^
-// ARRUMAR TABULEIRO PRA DEIXAR MAIS BONITO
-// ARRUMAR INPUT DA COBRA (APERTAR PRA CIMA QND ELA TA INDO PRA BAIXO)
-// FAZER FIM DE JOGO
-
-
-
-int main()
-{
-  while (!colidiu) {
-
-  }
-
-  printf("Fim de Jogo!!!");
-  fflush(stdin);
-  getchar();
-
-  return 0;
-}
